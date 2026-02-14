@@ -89,6 +89,9 @@ test_df["Diagnosis"] = y_test.values
 test_df.to_csv("test.csv", index=False)
 print("\nTest dataset saved as test.csv")
 
+
+os.makedirs("model", exist_ok=True)
+
 # ----------------------------
 # 8. SCALING (For LR, KNN, XGB)
 # ----------------------------
@@ -161,4 +164,5 @@ results_df = results_df.sort_values(by="Accuracy", ascending=False)
 print("\n================ MODEL RESULTS ================\n")
 print(results_df.to_string(index=False))
 print("\n==============================================")
+
 
