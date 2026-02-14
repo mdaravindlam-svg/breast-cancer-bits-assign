@@ -150,8 +150,19 @@ for name, model in models.items():
 
     if name in ["Logistic Regression", "KNN", "XGBoost"]:
         res = evaluate_model(name, model, scaled=True)
+
+        # Train again on scaled data to save model properly
+        model.fit(X_train_scaled, y_train)
+
     else:
         res = evaluate_model(name, model, scaled=False)
+
+        # Train again on normal data
+        model.fit(X_train, y_train)
+
+    # Save model
+    filename = name.lower().replace(" ", "_") + ".pkl"
+    joblib.dump(model, f"model/{filename}")
 
     results.append(res)
 
@@ -164,5 +175,6 @@ results_df = results_df.sort_values(by="Accuracy", ascending=False)
 print("\n================ MODEL RESULTS ================\n")
 print(results_df.to_string(index=False))
 print("\n==============================================")
+
 
 
