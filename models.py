@@ -1,6 +1,6 @@
 # =========================================================
 # Breast Cancer Wisconsin Classification - FINAL COMPLETE CODE
-# (Includes Saving Test Dataset to test.csv)
+# (Includes Test CSV Saving + Model Saving for Streamlit)
 # =========================================================
 
 # ----------------------------
@@ -8,8 +8,8 @@
 # ----------------------------
 import pandas as pd
 import numpy as np
-import joblib
 import os
+import joblib
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -32,35 +32,33 @@ from sklearn.metrics import (
 )
 
 # ----------------------------
-# 2. LOAD DATASET
+# 2. CREATE MODEL FOLDER
 # ----------------------------
-data = pd.read_csv("data.csv")   # Make sure data.csv is in same folder
+os.makedirs("model", exist_ok=True)
 
 # ----------------------------
-# 3. CLEAN DATASET
+# 3. LOAD DATASET
 # ----------------------------
-
-# Remove fully empty columns (like Unnamed: 32)
-data = data.dropna(axis=1, how='all')
-
-# Drop ID column
-data = data.drop(columns=[data.columns[0]])
+data = pd.read_csv("data.csv")
 
 # ----------------------------
-# 4. TARGET VARIABLE
+# 4. CLEAN DATASET
+# ----------------------------
+data = data.dropna(axis=1, how='all')     # Remove empty columns
+data = data.drop(columns=[data.columns[0]])   # Drop ID column
+
+# ----------------------------
+# 5. TARGET VARIABLE
 # ----------------------------
 y = data.iloc[:, 0].map({'M': 1, 'B': 0})
 y = y.astype(int)
 
 # ----------------------------
-# 5. FEATURES
+# 6. FEATURES
 # ----------------------------
 X = data.iloc[:, 1:]
-
-# Convert features to numeric safely
 X = X.apply(pd.to_numeric, errors='coerce')
 
-# Handle missing values using MEDIAN
 imputer = SimpleImputer(strategy="median")
 X = pd.DataFrame(imputer.fit_transform(X), columns=X.columns)
 
@@ -71,7 +69,7 @@ print("Target values:", np.unique(y))
 print("Target dtype:", y.dtype)
 
 # ----------------------------
-# 6. TRAIN TEST SPLIT (85:15)
+# 7. TRAIN TEST SPLIT
 # ----------------------------
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
@@ -81,26 +79,25 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # ----------------------------
-# 7. SAVE TEST DATASET (IMPORTANT PART YOU REQUESTED)
+# 8. SAVE TEST DATASET
 # ----------------------------
 test_df = X_test.copy()
 test_df["Diagnosis"] = y_test.values
-
 test_df.to_csv("test.csv", index=False)
 print("\nTest dataset saved as test.csv")
 
-
-os.makedirs("model", exist_ok=True)
-
 # ----------------------------
-# 8. SCALING (For LR, KNN, XGB)
+# 9. SCALING
 # ----------------------------
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
+# Save scaler
+joblib.dump(scaler, "model/scaler.pkl")
+
 # ----------------------------
-# 9. DEFINE MODELS
+# 10. DEFINE MODELS
 # ----------------------------
 models = {
     "Logistic Regression": LogisticRegression(max_iter=1000),
@@ -108,14 +105,11 @@ models = {
     "KNN": KNeighborsClassifier(n_neighbors=5),
     "Naive Bayes": GaussianNB(),
     "Random Forest": RandomForestClassifier(n_estimators=200, random_state=42),
-    "XGBoost": XGBClassifier(
-        eval_metric='logloss',
-        random_state=42
-    )
+    "XGBoost": XGBClassifier(eval_metric='logloss', random_state=42)
 }
 
 # ----------------------------
-# 10. EVALUATION FUNCTION
+# 11. EVALUATION FUNCTION
 # ----------------------------
 def evaluate_model(name, model, scaled=False):
 
@@ -142,7 +136,7 @@ def evaluate_model(name, model, scaled=False):
     return results
 
 # ----------------------------
-# 11. TRAIN + EVALUATE ALL MODELS
+# 12. TRAIN + SAVE ALL MODELS
 # ----------------------------
 results = []
 
@@ -150,24 +144,21 @@ for name, model in models.items():
 
     if name in ["Logistic Regression", "KNN", "XGBoost"]:
         res = evaluate_model(name, model, scaled=True)
-
-        # Train again on scaled data to save model properly
         model.fit(X_train_scaled, y_train)
-
     else:
         res = evaluate_model(name, model, scaled=False)
-
-        # Train again on normal data
         model.fit(X_train, y_train)
 
     # Save model
     filename = name.lower().replace(" ", "_") + ".pkl"
     joblib.dump(model, f"model/{filename}")
 
+    print(f"{name} saved as model/{filename}")
+
     results.append(res)
 
 # ----------------------------
-# 12. SHOW RESULTS
+# 13. SHOW RESULTS
 # ----------------------------
 results_df = pd.DataFrame(results)
 results_df = results_df.sort_values(by="Accuracy", ascending=False)
@@ -175,6 +166,3 @@ results_df = results_df.sort_values(by="Accuracy", ascending=False)
 print("\n================ MODEL RESULTS ================\n")
 print(results_df.to_string(index=False))
 print("\n==============================================")
-
-
-
